@@ -40,11 +40,54 @@ twilio_client = Client(
 )
 
 
+def parse_manual_entry(message: str) -> dict:
+    """Parse manual calorie and protein entry"""
+    import re
+
+    message_lower = message.lower()
+
+    # Check if this is a manual entry (contains both "calorie" and "protein" keywords)
+    if ('calorie' in message_lower or 'cal' in message_lower) and ('protein' in message_lower):
+        # Extract calories
+        cal_patterns = [
+            r'(\d+\.?\d*)\s*(?:calories?|cals?|kcals?)',
+            r'(?:calories?|cals?|kcals?)\s*[:\s]*(\d+\.?\d*)',
+        ]
+        calories = 0
+        for pattern in cal_patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                calories = float(match.group(1))
+                break
+
+        # Extract protein
+        protein_patterns = [
+            r'protein\s*[:\s]+(\d+\.?\d*)\s*g?',  # protein: 30g or protein 30g
+            r'(\d+\.?\d*)\s*g?\s*protein',         # 30g protein or 30 protein
+        ]
+        protein = 0
+        for pattern in protein_patterns:
+            match = re.search(pattern, message_lower)
+            if match:
+                protein = float(match.group(1))
+                break
+
+        if calories > 0 or protein > 0:
+            return {
+                'type': 'manual_entry',
+                'calories': calories,
+                'protein': protein,
+                'original_message': message
+            }
+
+    return {'type': 'not_manual_entry'}
+
+
 def format_meal_response(result: dict) -> str:
     """Format the meal logging result as a WhatsApp message"""
     if result['type'] == 'meal_logged':
         response_lines = ["✅ *Meal Logged Successfully!*\n"]
-        
+
         # List each item
         for item in result['items']:
             response_lines.append(
@@ -52,19 +95,29 @@ def format_meal_response(result: dict) -> str:
                 f"({item['serving_size']})\n"
                 f"  Calories: {item['calories']} kcal | Protein: {item['protein']}g"
             )
-        
+
         response_lines.append(
             f"\n📊 *TOTAL:*\n"
             f"🔥 Calories: {result['total_calories']} kcal\n"
             f"💪 Protein: {result['total_protein']}g"
         )
-        
+
         return "\n".join(response_lines)
-    
+
     elif result['type'] == 'no_food_found':
         return result['message']
-    
+
     return "I couldn't process your message. Please try again."
+
+
+def format_manual_entry_response(calories: float, protein: float) -> str:
+    """Format manual entry confirmation message"""
+    return (
+        f"✅ *Manual Entry Logged!*\n\n"
+        f"🔥 Calories: {calories} kcal\n"
+        f"💪 Protein: {protein}g\n\n"
+        f"Added to today's total."
+    )
 
 
 def format_daily_summary(summary: dict, recent_meals: list) -> str:
@@ -75,7 +128,7 @@ def format_daily_summary(summary: dict, recent_meals: list) -> str:
         f"🔥 Total Calories: {summary['total_calories']} kcal",
         f"💪 Total Protein: {summary['total_protein']}g"
     ]
-    
+
     if recent_meals:
         response_lines.append("\n📝 *Recent Meals:*")
         for i, meal in enumerate(recent_meals[:3], 1):
@@ -83,8 +136,18 @@ def format_daily_summary(summary: dict, recent_meals: list) -> str:
                 f"{i}. {meal['description'][:50]}\n"
                 f"   {meal['calories']} kcal | {meal['protein']}g protein"
             )
-    
+
     return "\n".join(response_lines)
+
+
+def format_total(summary: dict) -> str:
+    """Format a quick total summary (calories and protein only)"""
+    return (
+        f"📊 *Today's Total*\n\n"
+        f"🔥 Calories: {summary['total_calories']} kcal\n"
+        f"💪 Protein: {summary['total_protein']}g\n"
+        f"🍽️ Meals: {summary['meal_count']}"
+    )
 
 
 def get_help_message() -> str:
@@ -100,10 +163,16 @@ I help you track your Indian meals and nutrition.
   - "Had 3 idlis for breakfast"
 
 *Commands:*
-• "summary" or "stats" - See today's totals
+• "total" - Quick view of today's calories & protein
+• "summary" or "stats" - Detailed stats with recent meals
 • "list" or "menu" - See all available foods
 • "export" - Download your meal log as Excel
 • "help" - Show this message
+
+*Manual Entry:*
+If you know the exact values, send:
+"protein 20g and calories 300"
+Or: "150 calories and 10g protein"
 
 *Available foods:*
 35+ Indian foods including roti, rice, dal, paneer, chicken curry, biryani, idli, dosa, and many more!
@@ -150,14 +219,41 @@ def whatsapp_webhook():
             msg.body(message)
             return str(resp)
         
-        # Check if it's a summary request
-        if any(word in incoming_msg.lower() for word in ['summary', 'total', 'today', 'stats']):
+        # Check for manual entry (calories and protein)
+        manual_entry = parse_manual_entry(incoming_msg)
+        if manual_entry['type'] == 'manual_entry':
+            # Log manual entry to database
+            db.log_meal(
+                phone_number=sender,
+                meal_description=manual_entry['original_message'],
+                total_calories=manual_entry['calories'],
+                total_protein=manual_entry['protein'],
+                parsed_items='[]',
+                items_extracted='Manual entry',
+                source="whatsapp"
+            )
+            response_text = format_manual_entry_response(
+                manual_entry['calories'],
+                manual_entry['protein']
+            )
+            msg.body(response_text)
+            return str(resp)
+
+        # Check if it's a total request (quick format)
+        if incoming_msg.lower().strip() == 'total':
+            daily_summary = db.get_daily_summary(sender)
+            response_text = format_total(daily_summary)
+            msg.body(response_text)
+            return str(resp)
+
+        # Check if it's a summary request (detailed format)
+        if any(word in incoming_msg.lower() for word in ['summary', 'today', 'stats']):
             daily_summary = db.get_daily_summary(sender)
             recent_meals = db.get_recent_meals(sender, limit=3)
             response_text = format_daily_summary(daily_summary, recent_meals)
             msg.body(response_text)
             return str(resp)
-        
+
         # Process the meal
         result = food_parser.process_message(incoming_msg)
         
