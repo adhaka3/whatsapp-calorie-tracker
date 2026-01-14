@@ -230,17 +230,130 @@ def whatsapp_webhook():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "message": "WhatsApp Calorie Tracker is running"}
+    """Health check endpoint for UptimeRobot monitoring"""
+    import datetime
+
+    # Check database connectivity
+    try:
+        db.get_daily_summary("health_check", datetime.datetime.now())
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+
+    return {
+        "status": "healthy",
+        "message": "WhatsApp Calorie Tracker is running",
+        "timestamp": datetime.datetime.now().isoformat(),
+        "database": db_status,
+        "parser_mode": "LLM-powered" if use_llm else "FREE regex-based",
+        "uptime": "ready"
+    }, 200
+
+
+@app.route('/ping', methods=['GET'])
+def ping():
+    """Simple ping endpoint for keep-alive services"""
+    return "pong", 200
 
 
 @app.route('/', methods=['GET'])
 def home():
     """Home endpoint"""
-    return """
-    <h1>WhatsApp Calorie Tracker</h1>
-    <p>Send a WhatsApp message to track your meals!</p>
-    <p>Status: Running ✅</p>
+    parser_mode = "🤖 LLM-powered" if use_llm else "🆓 FREE regex-based"
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>WhatsApp Calorie Tracker</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                max-width: 600px;
+                margin: 50px auto;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+            }}
+            .container {{
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 30px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            }}
+            h1 {{ margin-top: 0; font-size: 2em; }}
+            .status {{
+                background: rgba(76, 175, 80, 0.3);
+                padding: 15px;
+                border-radius: 10px;
+                margin: 20px 0;
+                border-left: 4px solid #4CAF50;
+            }}
+            .endpoint {{
+                background: rgba(0, 0, 0, 0.2);
+                padding: 10px;
+                border-radius: 8px;
+                margin: 10px 0;
+                font-family: monospace;
+            }}
+            .badge {{
+                display: inline-block;
+                background: rgba(255, 255, 255, 0.2);
+                padding: 5px 12px;
+                border-radius: 15px;
+                font-size: 0.9em;
+                margin: 5px 5px 5px 0;
+            }}
+            a {{
+                color: #fff;
+                text-decoration: none;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+            }}
+            a:hover {{ border-bottom-color: #fff; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🥗 WhatsApp Calorie Tracker</h1>
+
+            <div class="status">
+                <strong>✅ Status: Running</strong><br>
+                <small>Last checked: Just now</small>
+            </div>
+
+            <p><strong>📊 Configuration:</strong></p>
+            <div class="badge">{parser_mode}</div>
+            <div class="badge">💾 SQLite Database</div>
+            <div class="badge">📱 WhatsApp Ready</div>
+
+            <p><strong>🔗 Monitoring Endpoints:</strong></p>
+            <div class="endpoint">
+                <strong>Health:</strong> <a href="/health">/health</a><br>
+                <small>Use this URL for UptimeRobot monitoring</small>
+            </div>
+            <div class="endpoint">
+                <strong>Ping:</strong> <a href="/ping">/ping</a><br>
+                <small>Lightweight keep-alive endpoint</small>
+            </div>
+
+            <p><strong>📱 How to Use:</strong></p>
+            <ol>
+                <li>Connect your WhatsApp to Twilio sandbox</li>
+                <li>Send: "I had 2 rotis and dal"</li>
+                <li>Get instant nutrition info!</li>
+            </ol>
+
+            <p><strong>🔔 Setup Monitoring:</strong></p>
+            <ol>
+                <li>Go to <a href="https://uptimerobot.com" target="_blank">UptimeRobot.com</a></li>
+                <li>Add monitor with URL: <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">/health</code></li>
+                <li>Set interval to 5 minutes</li>
+                <li>Keep app awake 24/7!</li>
+            </ol>
+        </div>
+    </body>
+    </html>
     """
 
 
