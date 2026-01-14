@@ -1,0 +1,254 @@
+[
+  {
+    "name": "roti",
+    "aliases": ["chapati", "phulka", "wheat roti", "chapathi"],
+    "calories": 71,
+    "protein": 3.1,
+    "serving_size": "1 medium (30g)"
+  },
+  {
+    "name": "naan",
+    "aliases": ["nan", "garlic naan", "butter naan"],
+    "calories": 262,
+    "protein": 7.6,
+    "serving_size": "1 naan (90g)"
+  },
+  {
+    "name": "rice",
+    "aliases": ["white rice", "steamed rice", "boiled rice"],
+    "calories": 130,
+    "protein": 2.7,
+    "serving_size": "100g cooked"
+  },
+  {
+    "name": "dal",
+    "aliases": ["lentils", "daal", "dal tadka", "toor dal"],
+    "calories": 104,
+    "protein": 7.6,
+    "serving_size": "1 bowl (150g)"
+  },
+  {
+    "name": "chicken curry",
+    "aliases": ["chicken masala", "murgh curry"],
+    "calories": 180,
+    "protein": 20,
+    "serving_size": "1 serving (150g)"
+  },
+  {
+    "name": "paneer",
+    "aliases": ["cottage cheese", "paneer cubes"],
+    "calories": 265,
+    "protein": 18,
+    "serving_size": "100g"
+  },
+  {
+    "name": "palak paneer",
+    "aliases": ["spinach paneer"],
+    "calories": 180,
+    "protein": 10,
+    "serving_size": "1 serving (200g)"
+  },
+  {
+    "name": "butter chicken",
+    "aliases": ["murgh makhani"],
+    "calories": 235,
+    "protein": 18,
+    "serving_size": "1 serving (200g)"
+  },
+  {
+    "name": "samosa",
+    "aliases": ["samosa"],
+    "calories": 262,
+    "protein": 4.3,
+    "serving_size": "1 piece (100g)"
+  },
+  {
+    "name": "idli",
+    "aliases": ["idly"],
+    "calories": 39,
+    "protein": 2,
+    "serving_size": "1 piece"
+  },
+  {
+    "name": "dosa",
+    "aliases": ["plain dosa", "masala dosa"],
+    "calories": 133,
+    "protein": 3.9,
+    "serving_size": "1 medium dosa"
+  },
+  {
+    "name": "paratha",
+    "aliases": ["stuffed paratha", "aloo paratha"],
+    "calories": 126,
+    "protein": 3,
+    "serving_size": "1 medium (60g)"
+  },
+  {
+    "name": "curd",
+    "aliases": ["yogurt", "dahi"],
+    "calories": 98,
+    "protein": 11,
+    "serving_size": "1 bowl (200g)"
+  },
+  {
+    "name": "raita",
+    "aliases": ["cucumber raita"],
+    "calories": 67,
+    "protein": 3.5,
+    "serving_size": "1 bowl (150g)"
+  },
+  {
+    "name": "biryani",
+    "aliases": ["chicken biryani", "veg biryani"],
+    "calories": 280,
+    "protein": 12,
+    "serving_size": "1 plate (250g)"
+  },
+  {
+    "name": "khichdi",
+    "aliases": ["khichadi"],
+    "calories": 120,
+    "protein": 4.5,
+    "serving_size": "1 bowl (200g)"
+  },
+  {
+    "name": "poha",
+    "aliases": ["beaten rice", "aval"],
+    "calories": 180,
+    "protein": 3.2,
+    "serving_size": "1 bowl (150g)"
+  },
+  {
+    "name": "upma",
+    "aliases": ["rava upma"],
+    "calories": 200,
+    "protein": 4,
+    "serving_size": "1 bowl (200g)"
+  },
+  {
+    "name": "aloo sabzi",
+    "aliases": ["potato curry", "aloo ki sabzi"],
+    "calories": 150,
+    "protein": 3,
+    "serving_size": "1 serving (150g)"
+  },
+  {
+    "name": "rajma",
+    "aliases": ["kidney beans curry", "rajma masala"],
+    "calories": 140,
+    "protein": 8.7,
+    "serving_size": "1 bowl (150g)"
+  },
+  {
+    "name": "chana masala",
+    "aliases": ["chickpea curry", "chole"],
+    "calories": 164,
+    "protein": 8.9,
+    "serving_size": "1 bowl (150g)"
+  },
+  {
+    "name": "egg curry",
+    "aliases": ["anda curry"],
+    "calories": 210,
+    "protein": 14,
+    "serving_size": "2 eggs with gravy"
+  },
+  {
+    "name": "boiled egg",
+    "aliases": ["hard boiled egg"],
+    "calories": 68,
+    "protein": 5.5,
+    "serving_size": "1 egg"
+  },
+  {
+    "name": "omelette",
+    "aliases": ["egg omelette"],
+    "calories": 154,
+    "protein": 11,
+    "serving_size": "2 eggs"
+  },
+  {
+    "name": "tea",
+    "aliases": ["chai", "masala chai"],
+    "calories": 37,
+    "protein": 1,
+    "serving_size": "1 cup (200ml)"
+  },
+  {
+    "name": "coffee",
+    "aliases": ["coffee"],
+    "calories": 25,
+    "protein": 1.2,
+    "serving_size": "1 cup (200ml)"
+  },
+  {
+    "name": "milk",
+    "aliases": ["full cream milk", "whole milk"],
+    "calories": 103,
+    "protein": 5.5,
+    "serving_size": "1 glass (200ml)"
+  },
+  {
+    "name": "banana",
+    "aliases": ["kela"],
+    "calories": 89,
+    "protein": 1.1,
+    "serving_size": "1 medium"
+  },
+  {
+    "name": "apple",
+    "aliases": ["seb"],
+    "calories": 52,
+    "protein": 0.3,
+    "serving_size": "1 medium"
+  },
+  {
+    "name": "gulab jamun",
+    "aliases": ["gulab jamun"],
+    "calories": 175,
+    "protein": 2.5,
+    "serving_size": "1 piece"
+  },
+  {
+    "name": "jalebi",
+    "aliases": ["jalebi"],
+    "calories": 150,
+    "protein": 1,
+    "serving_size": "1 piece (30g)"
+  },
+  {
+    "name": "lassi",
+    "aliases": ["sweet lassi", "mango lassi"],
+    "calories": 140,
+    "protein": 5,
+    "serving_size": "1 glass (200ml)"
+  },
+  {
+    "name": "sambar",
+    "aliases": ["sambhar", "lentil soup"],
+    "calories": 90,
+    "protein": 4.5,
+    "serving_size": "1 bowl (150ml)"
+  },
+  {
+    "name": "vada",
+    "aliases": ["medu vada", "vadai"],
+    "calories": 150,
+    "protein": 4,
+    "serving_size": "1 piece"
+  },
+  {
+    "name": "puri",
+    "aliases": ["poori", "bhatura"],
+    "calories": 140,
+    "protein": 2.5,
+    "serving_size": "1 piece (40g)"
+  },
+  {
+    "name": "uttapam",
+    "aliases": ["uthappam", "oothappam"],
+    "calories": 180,
+    "protein": 5,
+    "serving_size": "1 piece"
+  }
+]
