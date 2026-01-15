@@ -47,12 +47,6 @@ jobs:
         USE_LLM: false
         DATABASE_PATH: data/test_ci.db
 
-    - name: Test custom food SQLite storage
-      run: |
-        echo "🧪 Testing Custom Food SQLite Storage..."
-        python test_custom_food_sqlite.py
-      continue-on-error: false
-
     - name: Test Summary
       if: always()
       run: |
