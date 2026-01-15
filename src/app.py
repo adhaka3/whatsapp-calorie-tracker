@@ -194,17 +194,22 @@ def get_greeting_message() -> str:
     """Return greeting message for hi/hello"""
     return """👋 *Welcome to Calorie Tracker!*
 
-I'm here to help you track your meals and nutrition effortlessly.
+I'm here to help you track your meals and nutrition! 🍛
 
 ✨ *Quick Start:*
-Just tell me what you ate, and I'll track it for you!
+Just tell me what you ate: "I had 2 rotis and dal"
 
-Example: "I had 2 rotis and dal"
+💡 Type *help* or *commands* to see what I can do.
 
-💡 *Want to know more?*
-Type *help* or *commands* to see everything I can do.
+📝 *Friendly Reminder:*
+We're a small group of 5 users sharing 50 messages per day, so please use thoughtfully!
 
-Let's get started! 🍛"""
+If you'd like to add a new food to our database, we'd appreciate if you could contribute directly here:
+https://github.com/adhaka3/whatsapp-calorie-tracker
+
+_(Note: The 'add' feature might have issues when new changes are deployed)_
+
+Thank you for being considerate! 😊"""
 
 
 def get_help_message() -> str:

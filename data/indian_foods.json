@@ -15,7 +15,7 @@
   },
   {
     "name": "rice",
-    "aliases": ["white rice", "steamed rice", "boiled rice"],
+    "aliases": ["white rice", "steamed rice", "boiled rice", "chawal"],
     "calories": 130,
     "protein": 2.7,
     "serving_size": "100g cooked"
@@ -65,16 +65,23 @@
   {
     "name": "idli",
     "aliases": ["idly"],
-    "calories": 39,
+    "calories": 50,
     "protein": 2,
     "serving_size": "1 piece"
   },
   {
     "name": "dosa",
-    "aliases": ["plain dosa", "masala dosa"],
+    "aliases": ["plain dosa"],
     "calories": 133,
     "protein": 3.9,
     "serving_size": "1 medium dosa"
+  },
+  {
+    "name": "masala dosa",
+    "aliases": ["masala dosa"],
+    "calories": 300,
+    "protein": 5.5,
+    "serving_size": "1 medium masala dosa"
   },
   {
     "name": "paratha",
@@ -155,7 +162,7 @@
   },
   {
     "name": "boiled egg",
-    "aliases": ["hard boiled egg"],
+    "aliases": ["hard boiled egg", "egg"],
     "calories": 68,
     "protein": 5.5,
     "serving_size": "1 egg"
@@ -170,16 +177,16 @@
   {
     "name": "tea",
     "aliases": ["chai", "masala chai"],
-    "calories": 37,
+    "calories": 28,
     "protein": 1,
-    "serving_size": "1 cup (200ml)"
+    "serving_size": "1 cup (150ml)"
   },
   {
     "name": "coffee",
     "aliases": ["coffee"],
-    "calories": 25,
-    "protein": 1.2,
-    "serving_size": "1 cup (200ml)"
+    "calories": 18,
+    "protein": 1,
+    "serving_size": "1 cup (150ml)"
   },
   {
     "name": "milk",
