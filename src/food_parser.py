@@ -7,7 +7,7 @@ from difflib import SequenceMatcher
 
 
 class FoodParser:
-    def __init__(self, food_database_path: str = "data/indian_foods.json", llm_provider: str = None, use_llm: bool = False):
+    def __init__(self, food_database_path: str = "data/indian_foods.json", llm_provider: str = None, use_llm: bool = False, meal_db=None):
         """
         Initialize the food parser
 
@@ -15,19 +15,32 @@ class FoodParser:
             food_database_path: Path to the Indian foods JSON database
             llm_provider: 'openai', 'anthropic', or None for regex-only (default: None)
             use_llm: If True, will use LLM when available. If False, uses regex only (default: False)
+            meal_db: MealDatabase instance for loading custom foods (optional)
         """
         self.food_database_path = food_database_path
         self.llm_provider = llm_provider
         self.use_llm = use_llm
         self.client = None
+        self.meal_db = meal_db
 
-        # Load food database
+        # Load base food database from JSON (read-only)
         with open(food_database_path, 'r') as f:
-            self.food_db = json.load(f)
+            base_foods = json.load(f)
+
+        # Load custom foods from database if available
+        custom_foods = []
+        if meal_db:
+            try:
+                custom_foods = meal_db.get_all_custom_foods()
+            except Exception as e:
+                print(f"Warning: Could not load custom foods: {e}")
+
+        # Merge base foods and custom foods
+        self.food_db = base_foods + custom_foods
 
         # Create a searchable index
         self.food_index = self._create_food_index()
-        
+
         # Initialize LLM client only if requested
         if self.use_llm and self.llm_provider:
             try:
@@ -380,7 +393,7 @@ If no food items are found, return an empty array: []
 
     def add_custom_food(self, name: str, calories: float, protein: float, serving_size: str, category: str = "custom") -> Dict:
         """
-        Add a custom food item to the database
+        Add a custom food item to the database (SQLite, not JSON)
 
         Args:
             name: Food name (e.g., "protein shake")
@@ -419,36 +432,42 @@ If no food items are found, return an empty array: []
                               f'  Serving: {self.food_index[name]["serving_size"]}'
                 }
 
-            # Create new food entry
-            new_food = {
-                "name": name,
-                "aliases": [],
-                "calories": float(calories),
-                "protein": float(protein),
-                "serving_size": serving_size,
-                "category": category
-            }
+            # Use database to add custom food (persists across deployments)
+            if not self.meal_db:
+                return {
+                    'success': False,
+                    'message': '❌ Database not available. Cannot add custom food.'
+                }
 
-            # Add to in-memory database
-            self.food_db.append(new_food)
-            self.food_index[name] = new_food
+            result = self.meal_db.add_custom_food(name, calories, protein, serving_size, category)
 
-            # Save to JSON file
-            import json
-            with open(self.food_database_path, 'w') as f:
-                json.dump(self.food_db, f, indent=2)
+            if result['success']:
+                # Add to in-memory database for immediate use
+                new_food = {
+                    "name": name,
+                    "aliases": [],
+                    "calories": float(calories),
+                    "protein": float(protein),
+                    "serving_size": serving_size,
+                    "category": category
+                }
+                self.food_db.append(new_food)
+                self.food_index[name] = new_food
 
-            return {
-                'success': True,
-                'message': f'✅ *Food Added Successfully!*\n\n'
-                          f'📝 Name: {name}\n'
-                          f'🔥 Calories: {calories} kcal\n'
-                          f'💪 Protein: {protein}g\n'
-                          f'📏 Serving: {serving_size}\n\n'
-                          f'You can now track this food by saying:\n'
-                          f'💡 "I had {name}"\n'
-                          f'💡 "2 {name}"'
-            }
+                # Return success message with formatting
+                return {
+                    'success': True,
+                    'message': f'✅ *Food Added Successfully!*\n\n'
+                              f'📝 Name: {name}\n'
+                              f'🔥 Calories: {calories} kcal\n'
+                              f'💪 Protein: {protein}g\n'
+                              f'📏 Serving: {serving_size}\n\n'
+                              f'You can now track this food by saying:\n'
+                              f'💡 "I had {name}"\n'
+                              f'💡 "2 {name}"'
+                }
+            else:
+                return result
 
         except Exception as e:
             return {

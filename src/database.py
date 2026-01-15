@@ -89,6 +89,20 @@ class MealDatabase:
             # Column already exists
             pass
 
+        # Create custom_foods table for user-added foods
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS custom_foods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                aliases TEXT,
+                calories REAL NOT NULL,
+                protein REAL NOT NULL,
+                serving_size TEXT NOT NULL,
+                category TEXT DEFAULT 'custom',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         conn.commit()
         conn.close()
     
@@ -523,3 +537,128 @@ class MealDatabase:
 
         conn.close()
         return meals
+
+    def add_custom_food(self, name: str, calories: float, protein: float, serving_size: str, category: str = "custom") -> Dict:
+        """
+        Add a custom food to the database (shared by all users)
+
+        Args:
+            name: Food name (e.g., "protein shake")
+            calories: Calories per serving
+            protein: Protein in grams per serving
+            serving_size: Description of serving size (e.g., "1 scoop (30g)")
+            category: Optional category (default: "custom")
+
+        Returns:
+            Dictionary with status and message
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Check if food already exists
+            cursor.execute('SELECT name, calories, protein, serving_size FROM custom_foods WHERE name = ?', (name.lower(),))
+            existing = cursor.fetchone()
+
+            if existing:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': f'❌ Food "{name}" already exists in database.\n\n'
+                              f'Current values:\n'
+                              f'  Calories: {existing[1]} kcal\n'
+                              f'  Protein: {existing[2]}g\n'
+                              f'  Serving: {existing[3]}'
+                }
+
+            # Insert new custom food
+            cursor.execute('''
+                INSERT INTO custom_foods (name, aliases, calories, protein, serving_size, category)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (name.lower(), '[]', float(calories), float(protein), serving_size, category))
+
+            conn.commit()
+            conn.close()
+
+            return {
+                'success': True,
+                'message': f'✅ Food "{name}" added successfully!'
+            }
+
+        except sqlite3.IntegrityError:
+            return {
+                'success': False,
+                'message': f'❌ Food "{name}" already exists in database.'
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'❌ Error adding food: {str(e)}'
+            }
+
+    def get_all_custom_foods(self) -> List[Dict]:
+        """
+        Get all custom foods from the database
+
+        Returns:
+            List of custom food dictionaries
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT name, aliases, calories, protein, serving_size, category
+            FROM custom_foods
+            ORDER BY name
+        ''')
+
+        custom_foods = []
+        for row in cursor.fetchall():
+            custom_foods.append({
+                'name': row[0],
+                'aliases': json.loads(row[1]) if row[1] else [],
+                'calories': row[2],
+                'protein': row[3],
+                'serving_size': row[4],
+                'category': row[5] if row[5] else 'custom'
+            })
+
+        conn.close()
+        return custom_foods
+
+    def delete_custom_food(self, name: str) -> Dict:
+        """
+        Delete a custom food from the database
+
+        Args:
+            name: Food name to delete
+
+        Returns:
+            Dictionary with status and message
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('DELETE FROM custom_foods WHERE name = ?', (name.lower(),))
+
+            if cursor.rowcount == 0:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': f'❌ Food "{name}" not found in custom foods.'
+                }
+
+            conn.commit()
+            conn.close()
+
+            return {
+                'success': True,
+                'message': f'✅ Food "{name}" deleted successfully!'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'❌ Error deleting food: {str(e)}'
+            }

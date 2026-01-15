@@ -16,22 +16,26 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Initialize components
+# Initialize database first (needed for custom foods)
+db = MealDatabase(db_path=os.getenv('DATABASE_PATH', '../data/user_meals.db'))
+
 # By default, uses FREE regex-based parsing (no API costs!)
 # Set USE_LLM=true in .env to enable LLM parsing (requires API key)
 use_llm = os.getenv("USE_LLM", "false").lower() == "true"
 llm_provider = os.getenv("LLM_PROVIDER", "anthropic") if use_llm else None
 
+# Initialize food parser with database instance for custom foods
 food_parser = FoodParser(
     food_database_path="../data/indian_foods.json",
     llm_provider=llm_provider,
-    use_llm=use_llm
+    use_llm=use_llm,
+    meal_db=db  # Pass database instance to load/save custom foods
 )
 
 if use_llm:
     print(f"🤖 Using LLM-powered parsing with {llm_provider}")
 else:
-    print("🆓 Using FREE regex-based parsing (no API costs!)")
-db = MealDatabase(db_path=os.getenv('DATABASE_PATH', '../data/user_meals.db'))
+    print("🆓 Using FREE regex-based parsing (no API costs!")
 
 # Twilio client (for sending messages)
 twilio_client = Client(

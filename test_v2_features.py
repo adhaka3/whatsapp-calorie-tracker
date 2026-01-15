@@ -110,12 +110,13 @@ def test_add_custom_food():
     print("=" * 70)
     print()
 
-    # Create a copy of the food database for testing
-    test_db_path = 'data/test_indian_foods_v2.json'
-    shutil.copy('data/indian_foods.json', test_db_path)
+    # Create test database (SQLite)
+    test_db_path = 'data/test_add_food_v2.db'
 
     try:
-        parser = FoodParser(test_db_path, use_llm=False)
+        # Initialize database and parser
+        db = MealDatabase(db_path=test_db_path)
+        parser = FoodParser('data/indian_foods.json', use_llm=False, meal_db=db)
         initial_count = len(parser.food_db)
 
         print(f"Initial food count: {initial_count}\n")
@@ -152,8 +153,9 @@ def test_add_custom_food():
 
         # Test 3: Verify meal logging with new food
         print("Test 3: Testing meal logging with new food...\n")
-        parser = FoodParser(test_db_path, use_llm=False)
-        result = parser.process_message("I had 2 protein shake")
+        # Reload parser to test persistence
+        parser2 = FoodParser('data/indian_foods.json', use_llm=False, meal_db=db)
+        result = parser2.process_message("I had 2 protein shake")
 
         if result['type'] == 'meal_logged':
             print(f"✅ New food can be tracked!")
@@ -185,11 +187,12 @@ def test_add_food_validation():
     print("=" * 70)
     print()
 
-    test_db_path = 'data/test_validation_v2.json'
-    shutil.copy('data/indian_foods.json', test_db_path)
+    test_db_path = 'data/test_validation_v2.db'
 
     try:
-        parser = FoodParser(test_db_path, use_llm=False)
+        # Initialize database and parser
+        db = MealDatabase(db_path=test_db_path)
+        parser = FoodParser('data/indian_foods.json', use_llm=False, meal_db=db)
 
         test_cases = [
             ("", 100, 10, "1 serving", False, "empty"),
