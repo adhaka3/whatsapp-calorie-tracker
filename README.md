@@ -47,7 +47,7 @@ Create `.env` file:
 # Required: Twilio WhatsApp
 TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
+TWILIO_WHATSAPP_NUMBER=whatsapp:+Xxxxxxxxxx
 
 # Optional: LLM for better accuracy (defaults to FREE parser)
 # ANTHROPIC_API_KEY=your_key  # Recommended: $5 free credits
