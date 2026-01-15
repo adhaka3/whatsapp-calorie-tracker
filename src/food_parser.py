@@ -10,20 +10,21 @@ class FoodParser:
     def __init__(self, food_database_path: str = "data/indian_foods.json", llm_provider: str = None, use_llm: bool = False):
         """
         Initialize the food parser
-        
+
         Args:
             food_database_path: Path to the Indian foods JSON database
             llm_provider: 'openai', 'anthropic', or None for regex-only (default: None)
             use_llm: If True, will use LLM when available. If False, uses regex only (default: False)
         """
+        self.food_database_path = food_database_path
         self.llm_provider = llm_provider
         self.use_llm = use_llm
         self.client = None
-        
+
         # Load food database
         with open(food_database_path, 'r') as f:
             self.food_db = json.load(f)
-        
+
         # Create a searchable index
         self.food_index = self._create_food_index()
         
@@ -376,3 +377,178 @@ If no food items are found, return an empty array: []
         else:
             foods = [food['name'] for food in self.food_db]
             return f"Available foods: {', '.join(sorted(foods))}"
+
+    def add_custom_food(self, name: str, calories: float, protein: float, serving_size: str, category: str = "custom") -> Dict:
+        """
+        Add a custom food item to the database
+
+        Args:
+            name: Food name (e.g., "protein shake")
+            calories: Calories per serving
+            protein: Protein in grams per serving
+            serving_size: Description of serving size (e.g., "1 scoop (30g)")
+            category: Optional category (default: "custom")
+
+        Returns:
+            Dictionary with status and message
+        """
+        try:
+            # Validate inputs
+            name = name.lower().strip()
+
+            if not name:
+                return {
+                    'success': False,
+                    'message': '❌ Food name cannot be empty'
+                }
+
+            if calories <= 0 or protein < 0:
+                return {
+                    'success': False,
+                    'message': '❌ Calories must be > 0 and protein must be >= 0'
+                }
+
+            # Check if food already exists
+            if name in self.food_index:
+                return {
+                    'success': False,
+                    'message': f'❌ Food "{name}" already exists in database.\n\n'
+                              f'Current values:\n'
+                              f'  Calories: {self.food_index[name]["calories"]} kcal\n'
+                              f'  Protein: {self.food_index[name]["protein"]}g\n'
+                              f'  Serving: {self.food_index[name]["serving_size"]}'
+                }
+
+            # Create new food entry
+            new_food = {
+                "name": name,
+                "aliases": [],
+                "calories": float(calories),
+                "protein": float(protein),
+                "serving_size": serving_size,
+                "category": category
+            }
+
+            # Add to in-memory database
+            self.food_db.append(new_food)
+            self.food_index[name] = new_food
+
+            # Save to JSON file
+            import json
+            with open(self.food_database_path, 'w') as f:
+                json.dump(self.food_db, f, indent=2)
+
+            return {
+                'success': True,
+                'message': f'✅ *Food Added Successfully!*\n\n'
+                          f'📝 Name: {name}\n'
+                          f'🔥 Calories: {calories} kcal\n'
+                          f'💪 Protein: {protein}g\n'
+                          f'📏 Serving: {serving_size}\n\n'
+                          f'You can now track this food by saying:\n'
+                          f'💡 "I had {name}"\n'
+                          f'💡 "2 {name}"'
+            }
+
+        except Exception as e:
+            return {
+                'success': False,
+                'message': f'❌ Error adding food: {str(e)}'
+            }
+
+    def parse_add_food_command(self, message: str) -> Dict:
+        """
+        Parse the 'add' command to extract food details
+
+        Supported formats:
+        - add <name> <calories> <protein> <serving_size>
+        - add <name>, <calories>, <protein>, <serving_size>
+        - add <name> | <calories> | <protein> | <serving_size>
+
+        Examples:
+        - add protein shake 120 30 1 scoop
+        - add pizza slice, 285, 12, 1 slice (100g)
+        - add oats | 150 | 5 | 1 bowl
+        """
+        import re
+
+        message = message.strip()
+
+        # Remove 'add' prefix (case insensitive)
+        message = re.sub(r'^add\s+', '', message, flags=re.IGNORECASE)
+
+        # Try different delimiter patterns
+        parts = None
+
+        # Pattern 1: Pipe delimiter (|)
+        if '|' in message:
+            parts = [p.strip() for p in message.split('|')]
+
+        # Pattern 2: Comma delimiter
+        elif ',' in message:
+            parts = [p.strip() for p in message.split(',')]
+
+        # Pattern 3: Space-based (more complex)
+        else:
+            # Try to extract: name, calories (number), protein (number), serving (rest)
+            # Pattern: <name> <number> <number> <rest>
+            pattern = r'^(.+?)\s+(\d+\.?\d*)\s+(\d+\.?\d*)\s+(.+)$'
+            match = re.match(pattern, message)
+            if match:
+                parts = [match.group(1), match.group(2), match.group(3), match.group(4)]
+
+        if not parts or len(parts) < 4:
+            return {
+                'type': 'parse_error',
+                'message': '❌ *Incorrect Format*\n\n'
+                          '📝 *How to add a food:*\n\n'
+                          '*Option 1: Space-separated*\n'
+                          '`add <name> <calories> <protein> <serving>`\n\n'
+                          '*Option 2: Comma-separated*\n'
+                          '`add <name>, <calories>, <protein>, <serving>`\n\n'
+                          '*Option 3: Pipe-separated*\n'
+                          '`add <name> | <calories> | <protein> | <serving>`\n\n'
+                          '*Examples:*\n'
+                          '• `add protein shake 120 30 1 scoop`\n'
+                          '• `add pizza slice, 285, 12, 1 slice (100g)`\n'
+                          '• `add oats | 150 | 5 | 1 bowl`\n\n'
+                          '💡 *Tips:*\n'
+                          '• Name should be unique\n'
+                          '• Calories must be a number\n'
+                          '• Protein must be a number (in grams)\n'
+                          '• Serving size can be any text'
+            }
+
+        try:
+            name = parts[0].strip()
+
+            # Try to convert to float - will raise ValueError if invalid
+            try:
+                calories = float(parts[1].strip())
+                protein = float(parts[2].strip())
+            except ValueError:
+                return {
+                    'type': 'parse_error',
+                    'message': '❌ *Invalid Numbers*\n\n'
+                              'Calories and protein must be valid numbers.\n\n'
+                              '*Example:*\n'
+                              '`add protein shake 120 30 1 scoop`\n'
+                              '               ↑   ↑   ↑\n'
+                              '            name cal pro serving'
+                }
+
+            serving_size = parts[3].strip()
+
+            return {
+                'type': 'add_food',
+                'name': name,
+                'calories': calories,
+                'protein': protein,
+                'serving_size': serving_size
+            }
+
+        except Exception as e:
+            return {
+                'type': 'parse_error',
+                'message': f'❌ *Error parsing command*\n\n{str(e)}'
+            }

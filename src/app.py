@@ -150,37 +150,98 @@ def format_total(summary: dict) -> str:
     )
 
 
-def get_help_message() -> str:
-    """Return help message"""
+def format_weekly_breakdown(breakdown: dict) -> str:
+    """Format the weekly breakdown as a WhatsApp message"""
+    response_lines = [
+        "📅 *Weekly Breakdown - Last 7 Days*\n"
+    ]
+
+    # Add daily breakdown
+    for day in breakdown['daily_breakdown']:
+        # Use emoji indicators for data presence
+        if day['meal_count'] == 0:
+            indicator = "⚪"
+            cal_str = "-"
+            pro_str = "-"
+        else:
+            indicator = "🟢"
+            cal_str = f"{day['calories']} kcal"
+            pro_str = f"{day['protein']}g"
+
+        response_lines.append(
+            f"{indicator} *{day['day_label']}* ({day['full_date']})\n"
+            f"   🔥 {cal_str} | 💪 {pro_str} | 🍽️ {day['meal_count']} meals"
+        )
+
+    # Add summary
+    response_lines.append(
+        f"\n📊 *Week Summary:*\n"
+        f"🔥 Total Calories: {breakdown['total_calories']} kcal\n"
+        f"💪 Total Protein: {breakdown['total_protein']}g\n"
+        f"🍽️ Total Meals: {breakdown['total_meals']}\n"
+        f"📈 Daily Average: {breakdown['avg_daily_calories']} kcal | {breakdown['avg_daily_protein']}g\n"
+        f"📆 Active Days: {breakdown['days_with_meals']}/7"
+    )
+
+    return "\n".join(response_lines)
+
+
+def get_greeting_message() -> str:
+    """Return greeting message for hi/hello"""
     return """👋 *Welcome to Calorie Tracker!*
 
-I help you track your Indian meals and nutrition.
+I'm here to help you track your meals and nutrition effortlessly.
 
-*How to use:*
-• Simply message me what you ate, e.g.:
-  - "I had 2 rotis and dal"
-  - "Ate chicken curry and rice"
-  - "Had 3 idlis for breakfast"
+✨ *Quick Start:*
+Just tell me what you ate, and I'll track it for you!
 
-*Commands:*
-• "total" - Quick view of today's calories & protein
-• "summary" or "stats" - Detailed stats with recent meals
-• "list" or "menu" - See all available foods
-• "export" - Download your meal log as Excel
-• "help" - Show this message
+Example: "I had 2 rotis and dal"
 
-*Manual Entry:*
-If you know the exact values, send:
-"protein 20g and calories 300"
-Or: "150 calories and 10g protein"
+💡 *Want to know more?*
+Type *help* or *commands* to see everything I can do.
 
-*Available foods:*
-35+ Indian foods including roti, rice, dal, paneer, chicken curry, biryani, idli, dosa, and many more!
+Let's get started! 🍛"""
 
-*Example:*
-"Had 2 rotis, dal, and paneer"
 
-Type "list" to see all available foods! 🍛"""
+def get_help_message() -> str:
+    """Return comprehensive help/commands message"""
+    return """📚 *Calorie Tracker - Commands Guide*
+
+*🍽️ TRACK MEALS*
+Just message what you ate naturally:
+• "I had 2 rotis and dal"
+• "Ate chicken curry and rice"
+
+*📊 VIEW STATS*
+• *total* - Today's calories & protein summary
+• *total week* - 7-day breakdown with daily stats
+• *summary* or *stats* - Detailed today's stats with recent meals
+
+*➕ ADD CUSTOM FOOD*
+• *add <name> <cal> <protein> <serving>*
+  Example: "add protein shake 120 30 1 scoop"
+• Food is immediately available for tracking!
+
+*✏️ MANUAL ENTRY*
+• Know exact values? Send:
+  "protein 20g and calories 300"
+
+*🗑️ DELETE LAST MEAL*
+• *delete* or *undo* - Remove your last meal entry
+• Made a mistake? Just undo it instantly!
+
+*📋 FOOD DATABASE*
+• *list* or *menu* - See all 35+ available foods
+• Includes roti, rice, dal, paneer, chicken curry, biryani, and more!
+
+*📥 EXPORT DATA*
+• *export* - Download your meal log as Excel file
+• Get all your data for detailed analysis
+
+*❓ HELP*
+• *help* or *commands* - Show this message
+
+Need assistance? Just send a message and I'll guide you! 😊"""
 
 
 @app.route('/webhook', methods=['POST'])
@@ -201,9 +262,15 @@ def whatsapp_webhook():
         if not incoming_msg:
             msg.body("Please send me a message about what you ate!")
             return str(resp)
-        
-        # Handle help/start commands
-        if incoming_msg.lower() in ['hi', 'hello', 'help', 'start']:
+
+        # Handle greeting messages (hi, hello, good morning, etc.)
+        greeting_triggers = ['hi', 'hello', 'hey', 'good morning', 'good afternoon', 'good evening', 'start']
+        if incoming_msg.lower() in greeting_triggers or incoming_msg.lower().startswith(tuple(greeting_triggers)):
+            msg.body(get_greeting_message())
+            return str(resp)
+
+        # Handle help/commands request
+        if incoming_msg.lower() in ['help', 'commands', 'command', '?', 'info']:
             msg.body(get_help_message())
             return str(resp)
         
@@ -212,7 +279,32 @@ def whatsapp_webhook():
             food_list = food_parser.get_food_list()
             msg.body(food_list)
             return str(resp)
-        
+
+        # Check for add food command
+        if incoming_msg.lower().startswith('add '):
+            parse_result = food_parser.parse_add_food_command(incoming_msg)
+
+            if parse_result['type'] == 'parse_error':
+                msg.body(parse_result['message'])
+                return str(resp)
+
+            elif parse_result['type'] == 'add_food':
+                # Add the food to database
+                add_result = food_parser.add_custom_food(
+                    name=parse_result['name'],
+                    calories=parse_result['calories'],
+                    protein=parse_result['protein'],
+                    serving_size=parse_result['serving_size']
+                )
+                msg.body(add_result['message'])
+                return str(resp)
+
+        # Check for delete last meal request
+        if any(phrase in incoming_msg.lower() for phrase in ['delete last', 'delete meal', 'undo', 'remove last', 'delete']):
+            result = db.delete_last_meal(sender)
+            msg.body(result['message'])
+            return str(resp)
+
         # Check for export request
         if any(word in incoming_msg.lower() for word in ['export', 'download', 'excel']):
             success, message = db.export_to_excel(f"data/exports/meals_{sender.replace(':', '_')}.xlsx", sender)
@@ -236,6 +328,13 @@ def whatsapp_webhook():
                 manual_entry['calories'],
                 manual_entry['protein']
             )
+            msg.body(response_text)
+            return str(resp)
+
+        # Check if it's a total week request (weekly breakdown)
+        if 'total week' in incoming_msg.lower() or 'week total' in incoming_msg.lower() or 'weekly' in incoming_msg.lower():
+            weekly_breakdown = db.get_weekly_breakdown(sender)
+            response_text = format_weekly_breakdown(weekly_breakdown)
             msg.body(response_text)
             return str(resp)
 
