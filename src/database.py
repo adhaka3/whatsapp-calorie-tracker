@@ -189,17 +189,93 @@ class MealDatabase:
 
         conn.close()
         return meals
+
+    def delete_last_meal(self, phone_number: str) -> Dict:
+        """
+        Delete the most recent meal for a user
+
+        Returns:
+            Dictionary with success status and deleted meal info
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        try:
+            # Get the most recent meal
+            cursor.execute('''
+                SELECT id, meal_description, total_calories, total_protein, timestamp, meal_tag
+                FROM meals
+                WHERE phone_number = ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ''', (phone_number,))
+
+            result = cursor.fetchone()
+
+            if not result:
+                conn.close()
+                return {
+                    'success': False,
+                    'message': '❌ No meals found to delete.\n\n'
+                              'You haven\'t logged any meals yet!'
+                }
+
+            meal_id, description, calories, protein, timestamp, meal_tag = result
+
+            # Delete the meal
+            cursor.execute('DELETE FROM meals WHERE id = ?', (meal_id,))
+            conn.commit()
+
+            # Format meal tag for display
+            meal_tag_display = meal_tag.replace('_', ' ').title() if meal_tag else "N/A"
+
+            # Parse timestamp
+            try:
+                if isinstance(timestamp, str):
+                    ts = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    time_str = ts.strftime('%I:%M %p')
+                else:
+                    time_str = "Unknown time"
+            except:
+                time_str = str(timestamp)
+
+            conn.close()
+
+            return {
+                'success': True,
+                'message': f'✅ *Last Meal Deleted*\n\n'
+                          f'🗑️ Removed: {description[:50]}\n'
+                          f'🕒 Logged at: {time_str}\n'
+                          f'🏷️ Meal Tag: {meal_tag_display}\n'
+                          f'🔥 Calories: {round(calories, 1)} kcal\n'
+                          f'💪 Protein: {round(protein, 1)}g\n\n'
+                          f'Your daily totals have been updated.',
+                'deleted_meal': {
+                    'description': description,
+                    'calories': round(calories, 1),
+                    'protein': round(protein, 1),
+                    'timestamp': timestamp,
+                    'meal_tag': meal_tag
+                }
+            }
+
+        except Exception as e:
+            conn.close()
+            return {
+                'success': False,
+                'message': f'❌ Error deleting meal: {str(e)}'
+            }
     
     def get_weekly_summary(self, phone_number: str) -> Dict:
         """Get weekly summary"""
         end_date = datetime.now()
         start_date = end_date - timedelta(days=7)
-        
+
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        
+
         cursor.execute('''
-            SELECT 
+            SELECT
                 COUNT(*) as meal_count,
                 AVG(total_calories) as avg_calories,
                 AVG(total_protein) as avg_protein,
@@ -209,10 +285,10 @@ class MealDatabase:
             WHERE phone_number = ?
             AND timestamp BETWEEN ? AND ?
         ''', (phone_number, start_date, end_date))
-        
+
         result = cursor.fetchone()
         conn.close()
-        
+
         return {
             'period': f'Last 7 days',
             'meal_count': result[0] or 0,
@@ -220,6 +296,80 @@ class MealDatabase:
             'avg_daily_protein': round(result[2] or 0, 1),
             'total_calories': round(result[3] or 0, 1),
             'total_protein': round(result[4] or 0, 1)
+        }
+
+    def get_weekly_breakdown(self, phone_number: str) -> Dict:
+        """
+        Get daily breakdown for the last 7 days
+
+        Returns:
+            Dictionary with daily breakdown and totals
+        """
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        # Get data for last 7 days
+        daily_data = []
+        total_calories = 0
+        total_protein = 0
+        total_meals = 0
+
+        for i in range(6, -1, -1):  # 6 days ago to today
+            date = datetime.now() - timedelta(days=i)
+            date_str = date.strftime('%Y-%m-%d')
+
+            cursor.execute('''
+                SELECT
+                    COUNT(*) as meal_count,
+                    SUM(total_calories) as total_calories,
+                    SUM(total_protein) as total_protein
+                FROM meals
+                WHERE phone_number = ?
+                AND DATE(timestamp) = ?
+            ''', (phone_number, date_str))
+
+            result = cursor.fetchone()
+            meal_count = result[0] or 0
+            calories = result[1] or 0
+            protein = result[2] or 0
+
+            # Format day name
+            if i == 0:
+                day_label = "Today"
+            elif i == 1:
+                day_label = "Yesterday"
+            else:
+                day_label = date.strftime('%A')  # Full day name (Monday, Tuesday, etc.)
+
+            daily_data.append({
+                'date': date_str,
+                'day_label': day_label,
+                'day_name': date.strftime('%a'),  # Short day name (Mon, Tue, etc.)
+                'full_date': date.strftime('%b %d'),  # Month Day (Jan 15)
+                'meal_count': meal_count,
+                'calories': round(calories, 1),
+                'protein': round(protein, 1)
+            })
+
+            total_calories += calories
+            total_protein += protein
+            total_meals += meal_count
+
+        conn.close()
+
+        # Calculate averages (only for days with meals)
+        days_with_meals = sum(1 for day in daily_data if day['meal_count'] > 0)
+        avg_calories = (total_calories / days_with_meals) if days_with_meals > 0 else 0
+        avg_protein = (total_protein / days_with_meals) if days_with_meals > 0 else 0
+
+        return {
+            'daily_breakdown': daily_data,
+            'total_calories': round(total_calories, 1),
+            'total_protein': round(total_protein, 1),
+            'total_meals': total_meals,
+            'avg_daily_calories': round(avg_calories, 1),
+            'avg_daily_protein': round(avg_protein, 1),
+            'days_with_meals': days_with_meals
         }
     
     def export_to_excel(self, output_file: str = "meal_logs.xlsx", phone_number: Optional[str] = None):
