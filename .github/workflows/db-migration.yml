@@ -1,0 +1,80 @@
+name: Database Migration Check
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/database.py'
+      - 'data/*.json'
+      - 'test_*.py'
+
+jobs:
+  migration:
+    runs-on: ubuntu-latest
+    name: Test Database Migrations
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Test database initialization
+      run: |
+        echo "🗄️  Testing database initialization..."
+        python -c "
+        from src.database import MealDatabase
+        db = MealDatabase('data/test_migration.db')
+        print('✅ Database initialized successfully')
+        "
+
+    - name: Verify all tables exist
+      run: |
+        echo "🔍 Verifying database tables..."
+        python -c "
+        import sqlite3
+        conn = sqlite3.connect('data/test_migration.db')
+        cursor = conn.cursor()
+
+        # Check users table
+        cursor.execute(\"SELECT name FROM sqlite_master WHERE type='table' AND name='users'\")
+        assert cursor.fetchone(), 'users table not found'
+        print('✅ users table exists')
+
+        # Check meals table
+        cursor.execute(\"SELECT name FROM sqlite_master WHERE type='table' AND name='meals'\")
+        assert cursor.fetchone(), 'meals table not found'
+        print('✅ meals table exists')
+
+        # Check custom_foods table
+        cursor.execute(\"SELECT name FROM sqlite_master WHERE type='table' AND name='custom_foods'\")
+        assert cursor.fetchone(), 'custom_foods table not found'
+        print('✅ custom_foods table exists')
+
+        conn.close()
+        "
+
+    - name: Test backward compatibility
+      run: |
+        echo "🔄 Testing backward compatibility..."
+        # Run all tests to ensure no breaking changes
+        python test_v2_features.py
+        python test_all.py
+
+    - name: Test custom food migration
+      run: |
+        echo "📦 Testing custom food storage..."
+        python test_custom_food_sqlite.py
+
+    - name: Clean up test database
+      run: |
+        rm -f data/test_migration.db
+        echo "🧹 Cleaned up test database"
